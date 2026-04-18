@@ -1,0 +1,10 @@
+market_data:
+  symbol: "ESCORTS.NS"
+  base_interval: "5m"
+  lookback_days: 10
+
+resample:
+  enabled: true
+  timeframes:
+    - "15min"   # 15 minutes
+    - "1h"    # 1 hour
