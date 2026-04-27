@@ -42,8 +42,6 @@ class ChartBuilder:
             y=prices,
             mode="lines",
             line=dict(color=CHART_THEME["price_line"], width=1.5),
-            fill="tozeroy",
-            fillcolor="rgba(41,98,255,0.08)",
             hovertemplate="<b>%{x}</b><br>₹%{y:,.2f}<extra></extra>",
             name="Price"
         ))
@@ -156,3 +154,97 @@ class ChartBuilder:
             lows.append(round(l, 2))
             closes.append(round(c, 2))
         return opens, highs, lows, closes
+
+    def build_signal(self, dev_z: dict) -> go.Figure:
+        fig = go.Figure()
+
+        colors = {"DEV_20": CHART_THEME["price_line"], "DEV_50": CHART_THEME["ma_line"]}
+
+        for key, values in dev_z.items():
+            if values is None:
+                continue
+            fig.add_trace(go.Scatter(
+                y=values, mode="lines",
+                line=dict(color=colors.get(key), width=1.2),
+                name=key
+            ))
+
+        # ±2σ threshold lines
+        for y, label in [(2, "+2σ"), (-2, "-2σ")]:
+            fig.add_hline(y=y, line_dash="dash", line_color="#434651",
+                          annotation_text=label,
+                          annotation_font_color=CHART_THEME["text"])
+
+        self._apply_signal_layout(fig)
+        return fig
+
+    def _apply_signal_layout(self, fig):
+        fig.update_layout(paper_bgcolor=CHART_THEME["paper_bg"],
+                          plot_bgcolor=CHART_THEME["bg"],
+                          margin=dict(l=10, r=60, t=10, b=30),
+                          xaxis=dict(showgrid=True, gridcolor=CHART_THEME["grid"],
+                                     tickfont=dict(color=CHART_THEME["text"], size=11)),
+                          yaxis=dict(showgrid=True, gridcolor=CHART_THEME["grid"],
+                                     tickfont=dict(color=CHART_THEME["text"], size=11),
+                                     side="right"),
+                          showlegend=True,
+                          legend=dict(font=dict(color=CHART_THEME["text"])))
+
+    def build_price_vs_vwap(self, vwap_df) -> go.Figure:
+        if vwap_df is None or vwap_df.empty:
+            return self.empty_figure()
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(
+            x=vwap_df.index,
+            y=vwap_df["Close"],
+            mode="lines",
+            line=dict(color=CHART_THEME["price_line"], width=1.5),
+            name="Close"
+        ))
+
+        colors = {20: CHART_THEME["ma_line"], 50: "#a78bfa"}
+        for w in [20, 50]:
+            col = f"VWAP_{w}"
+            if col in vwap_df.columns:
+                fig.add_trace(go.Scatter(
+                    x=vwap_df.index,
+                    y=vwap_df[col],
+                    mode="lines",
+                    line=dict(color=colors[w], width=1.2),
+                    name=f"VWAP {w}"
+                ))
+
+        self._apply_layout(fig)
+        return fig
+
+    def build_dev_z(self, stability_map: dict) -> go.Figure:
+        if not stability_map:
+            return self.empty_figure()
+
+        fig = go.Figure()
+
+        colors = {20: CHART_THEME["price_line"], 50: CHART_THEME["ma_line"]}
+        for w, stability_df in stability_map.items():
+            if stability_df.empty:
+                continue
+            fig.add_trace(go.Scatter(
+                x=stability_df.index,
+                y=stability_df["dev_z"],
+                mode="lines",
+                line=dict(color=colors.get(w), width=1.2),
+                name=f"DEV_Z {w}"
+            ))
+
+        for y, label in [(2, "+2σ"), (-2, "-2σ")]:
+            fig.add_hline(
+                y=y,
+                line_dash="dash",
+                line_color="#434651",
+                annotation_text=label,
+                annotation_font_color=CHART_THEME["text"]
+            )
+
+        self._apply_signal_layout(fig)
+        return fig

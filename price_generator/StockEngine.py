@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 
 class StockEngine:
-    def __init__(self, symbol, market_status, queue_manager, live_updater, data_queue):
+    def __init__(self, symbol, market_status, queue_manager, live_updater, data_queue, signal_queue):
         self.symbol = symbol
         self.market_status = market_status
         self.queue_manager = queue_manager
@@ -13,6 +13,7 @@ class StockEngine:
         self.running = False
 
         self.data_queue = data_queue
+        self.signal_queue = signal_queue
 
     def stop(self):
         self.running = False
@@ -35,9 +36,16 @@ class StockEngine:
         # --- Transmit every minute regardless of market state ---
         if not self.queue_manager.is_empty():
             if is_open:
-                self.data_queue.put({"type": "tick", "data": self.queue_manager.get_latest()})
+                payload = {"type": "tick", "data": self.queue_manager.get_latest()}
+                self.data_queue.put(payload)
+                self.signal_queue.put(payload)
             else:
-                self.data_queue.put({"type": "full_day", "data": self.queue_manager.get_all()})
+                payload = {"type": "full_day", "data": self.queue_manager.get_all()}
+                self.data_queue.put(payload)
+                self.signal_queue.put(payload)
+
+        self.data_queue.put({"type": "status", "data": is_open})
+        self.signal_queue.put({"type": "status", "data": is_open})
 
         # --- Live update if market open ---
         if is_open:

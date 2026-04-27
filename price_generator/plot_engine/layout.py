@@ -11,8 +11,44 @@ def build_layout(symbol: str):
         },
         children=[
             _topbar(symbol),
-            _toolbar(),
-            _chart(),
+            dcc.Tabs(
+                id="main-tabs",
+                value="tab-price",
+                colors={
+                    "border": CHART_THEME["border"],
+                    "primary": "#2962ff",
+                    "background": CHART_THEME["bg"]
+                },
+                children=[
+                    dcc.Tab(
+                        label="Price",
+                        value="tab-price",
+                        children=[_toolbar(), _price_chart()],
+                        style={"color": CHART_THEME["text"]},
+                        selected_style={"color": "#d1d4dc",
+                                        "backgroundColor": CHART_THEME["bg"],
+                                        "borderTop": "2px solid #2962ff"}
+                    ),
+                    dcc.Tab(
+                        label="Price vs VWAP",
+                        value="tab-vwap",
+                        children=[_vwap_chart()],
+                        style={"color": CHART_THEME["text"]},
+                        selected_style={"color": "#d1d4dc",
+                                        "backgroundColor": CHART_THEME["bg"],
+                                        "borderTop": "2px solid #2962ff"}
+                    ),
+                    dcc.Tab(
+                        label="Rolling Dev Z",
+                        value="tab-devz",
+                        children=[_devz_chart()],
+                        style={"color": CHART_THEME["text"]},
+                        selected_style={"color": "#d1d4dc",
+                                        "backgroundColor": CHART_THEME["bg"],
+                                        "borderTop": "2px solid #2962ff"}
+                    ),
+                ]
+            ),
             dcc.Interval(id="interval", interval=1000, n_intervals=0),
             dcc.Store(id="chart-type-store", data="line"),
             dcc.Store(id="ma-store", data=False),
@@ -20,6 +56,29 @@ def build_layout(symbol: str):
         ]
     )
 
+
+def _price_chart():
+    return dcc.Graph(
+        id="trade-chart",
+        config={"displayModeBar": False},
+        style={"height": "calc(100vh - 160px)"}
+    )
+
+
+def _vwap_chart():
+    return dcc.Graph(
+        id="vwap-chart",
+        config={"displayModeBar": False},
+        style={"height": "calc(100vh - 120px)"}
+    )
+
+
+def _devz_chart():
+    return dcc.Graph(
+        id="devz-chart",
+        config={"displayModeBar": False},
+        style={"height": "calc(100vh - 120px)"}
+    )
 
 def _topbar(symbol: str):
     return html.Div(
@@ -56,12 +115,4 @@ def _toolbar():
             html.Div(style={"width": "1px", "height": "16px", "background": "#2a2e39", "margin": "0 4px"}),
             html.Button("MA 20",  id="btn-ma",     n_clicks=0, style=BTN_INACTIVE),
         ]
-    )
-
-
-def _chart():
-    return dcc.Graph(
-        id="trade-chart",
-        config={"displayModeBar": False},
-        style={"height": "calc(100vh - 120px)"}
     )
