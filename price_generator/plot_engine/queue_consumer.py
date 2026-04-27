@@ -1,6 +1,7 @@
 import threading
 import queue
 from .logger import get_logger
+import time
 
 logger = get_logger("QueueConsumer")
 
@@ -44,32 +45,37 @@ class QueueConsumer:
     def _poll(self):
         while True:
             try:
-                message = self.data_queue.get_nowait()
-                msg_type = message.get("type")
-                data = message.get("data")
+                while True:
+                    try:
+                        message = self.data_queue.get_nowait()
+                    except queue.Empty:
+                        break
 
-                with self._lock:
-                    if msg_type == "full_day":
-                        self._ticks = data
-                        logger.debug(f"Full day data received — {len(data)} ticks")
-                    elif msg_type == "tick":
-                        self._ticks.append(data)
-                        logger.debug(f"Live tick received: {data}")
-                    elif msg_type == "signal":
-                        for key, value in data.items():
-                            self._latest_dev_z[key].append(value)
-                            if len(self._latest_dev_z[key]) > self._max_len:
-                                self._latest_dev_z[key].pop(0)
-                    elif msg_type == "status":
-                        self._market_open = data
-                    elif msg_type == "diagnostics":
-                        self._vwap_df = data["vwap_df"]
-                        self._stability_map = data["stability_map"]
-                        logger.debug("Diagnostics received")
+                    msg_type = message.get("type")
+                    data = message.get("data")
 
-            except queue.Empty:
-                pass
+                    with self._lock:
+                        if msg_type == "full_day":
+                            self._ticks = data
+                            logger.debug(f"Full day data received — {len(data)} ticks")
+                        elif msg_type == "tick":
+                            self._ticks.append(data)
+                            if len(self._ticks) > self._max_len:
+                                self._ticks = self._ticks[-self._max_len:]
+                            logger.debug(f"Live tick received: {data}")
+                        elif msg_type == "signal":
+                            for key, value in data.items():
+                                self._latest_dev_z[key].append(value)
+                                if len(self._latest_dev_z[key]) > self._max_len:
+                                    self._latest_dev_z[key].pop(0)
+                        elif msg_type == "status":
+                            self._market_open = data
+                        elif msg_type == "diagnostics":
+                            self._vwap_df = data["vwap_df"]
+                            self._stability_map = data["stability_map"]
+                            logger.debug("Diagnostics received")
+
             except Exception as e:
                 logger.error(f"Polling error: {e}", exc_info=True)
 
-            threading.Event().wait(1)
+            time.sleep(1)

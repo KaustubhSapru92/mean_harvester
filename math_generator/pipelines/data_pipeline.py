@@ -11,9 +11,9 @@ def run_data_pipeline(config):
     interval = config.get("market_data", "base_interval")
     lookback_days = config.get("market_data", "lookback_days")
 
-    resample_cfg = config.get("resample")
-    resample_enabled = resample_cfg.get("enabled", False)
-    resample_tfs = resample_cfg.get("timeframes", [])
+    #resample_cfg = config.get("resample")
+    resample_enabled = config.get("resample", "enabled") or False
+    resample_tfs     = config.get("resample", "timeframes") or []
 
     end_date = datetime.now()
     start_date = end_date - timedelta(days=lookback_days)

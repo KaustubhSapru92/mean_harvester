@@ -35,13 +35,13 @@ class QueueBackfillManager:
         return list(self.queue)
 
     # Backfill Logic
-    def run_backfill_if_needed(self, symbol):
+    def run_backfill_if_needed(self, symbol, force=False):
         """
         Backfills ONLY if:
         - Market is closed
         - Queue is empty
         """
-        if self.market_status.is_market_open(current_dt=datetime.now()):
+        if self.market_status.is_market_open(current_dt=datetime.now()) and not self.is_empty():
             return
 
         self.clear()

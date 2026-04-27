@@ -19,10 +19,12 @@ class YahooDataSource:
         df = df.reset_index()
 
         # --- Find Last Trading Day ---
-        df["date"] = df["Datetime"].dt.date
+        ts_col = "Datetime" if "Datetime" in df.columns else "Date"
+
+        df["date"] = df[ts_col].dt.date
         last_day = df["date"].iloc[-1]
 
-        session_df = df[df["date"] == last_day]
+        session_df = df[df["date"] == last_day].copy()
 
         # --- Convert To Tick Format (full OHLCV + price alias) ---
         ticks = []
