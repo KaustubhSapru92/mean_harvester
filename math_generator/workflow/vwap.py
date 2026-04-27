@@ -28,5 +28,7 @@ class VWAPCalculator:
 
             # Deviation (used in diagnostics)
             out[f"DEV_{w}"] = out["price_proxy"] - out[f"VWAP_{w}"]
+            # Normalised deviation (dimensionless ratio — Step 3 input)
+            out[f"NDEV_{w}"] = out[f"DEV_{w}"] / out[f"VWAP_{w}"]
 
         return out
