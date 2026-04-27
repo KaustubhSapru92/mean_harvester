@@ -85,19 +85,6 @@ def register_callbacks(app, queue_consumer):
 
         return fig, price_str, change_str, change_style, badge_text, badge_style
 
-    # New callback:
-    @app.callback(
-        Output("signal-chart", "figure"),
-        Input("interval", "n_intervals"),
-    )
-    def update_signal_chart(n):
-        dev_z = queue_consumer.get_dev_z()
-
-        if all(v is None for v in dev_z.values()):
-            return builder.empty_figure()
-
-        return builder.build_signal(dev_z)
-
     # =====================
     # Price vs VWAP chart
     # =====================

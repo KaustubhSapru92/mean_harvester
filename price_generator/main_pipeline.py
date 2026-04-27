@@ -54,7 +54,7 @@ class StockPipeline:
                                                    args=(self.data_queue, self.symbol),
                                                    daemon=True)
             plot_process.start()
-            self.logger.info("PlotEngine process started on http://localhost:8050")
+            self.logger.info("***PlotEngine process started***")
             signal_process = multiprocessing.Process(target=_run_signal_bridge,
                                                      args=(self.signal_queue,
                                                            self.data_queue,
