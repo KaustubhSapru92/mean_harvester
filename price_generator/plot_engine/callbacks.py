@@ -75,7 +75,55 @@ def register_callbacks(app, queue_consumer):
         fig = builder.build(ticks, chart_type, show_ma)
 
         # TODO: wire real market status from StockEngine when available
-        badge_text = "CLOSED"
-        badge_style = BADGE_CLOSED
+        # In update_chart — replace hardcoded badge:
+        is_open = queue_consumer.is_market_open()
+        badge_text = "OPEN" if is_open else "CLOSED"
+        badge_style = BADGE_OPEN if is_open else BADGE_CLOSED
+        #badge_text = "CLOSED"
+        #badge_style = BADGE_CLOSED
+
 
         return fig, price_str, change_str, change_style, badge_text, badge_style
+
+    # New callback:
+    @app.callback(
+        Output("signal-chart", "figure"),
+        Input("interval", "n_intervals"),
+    )
+    def update_signal_chart(n):
+        dev_z = queue_consumer.get_dev_z()
+
+        if all(v is None for v in dev_z.values()):
+            return builder.empty_figure()
+
+        return builder.build_signal(dev_z)
+
+    # =====================
+    # Price vs VWAP chart
+    # =====================
+    @app.callback(
+        Output("vwap-chart", "figure"),
+        Input("interval", "n_intervals"),
+    )
+    def update_vwap_chart(n):
+        vwap_df = queue_consumer.get_vwap_df()
+
+        if vwap_df is None:
+            return builder.empty_figure()
+
+        return builder.build_price_vs_vwap(vwap_df)
+
+    # =====================
+    # Rolling Dev Z chart
+    # =====================
+    @app.callback(
+        Output("devz-chart", "figure"),
+        Input("interval", "n_intervals"),
+    )
+    def update_devz_chart(n):
+        stability_map = queue_consumer.get_stability_map()
+
+        if not stability_map:
+            return builder.empty_figure()
+
+        return builder.build_dev_z(stability_map)
