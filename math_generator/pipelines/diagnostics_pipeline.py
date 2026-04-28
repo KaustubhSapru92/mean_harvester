@@ -1,6 +1,7 @@
 from workflow.plotter import OHLCVPlotter
 from diagnostics.vwap_stability import VWAPStabilityDiagnostics
 from workflow.vwap import VWAPCalculator
+from visualization.step3_viz import Step3Viz
 
 
 def run_static_diagnostics(base_vwap, vwap_windows, lookback_days):
@@ -82,3 +83,31 @@ def run_resampled_diagnostics(resampled_map, vwap_windows, symbol):
         results[tf] = resampled_vwap
 
     return results
+
+def run_step3_visualisations(ndev_map: dict, convergence_detail: dict,
+                             adf_results,
+                             hl_results,
+                             convergence_summary,
+                             symbol: str,
+                             interval: str
+                             ):
+    """
+    Stage 5 of Step 3.
+    Generates and displays all Step 3 diagnostic plots.
+
+    Parameters come directly from the vwap_pipeline return dict.
+    """
+
+    fig_dist = Step3Viz.deviation_distributions(ndev_map, symbol, interval)
+    fig_dist.show()
+
+    if convergence_detail:
+        fig_conv = Step3Viz.convergence_traces(convergence_detail, symbol, interval)
+        fig_conv.show()
+
+    fig_table = Step3Viz.results_table(adf_results,
+                                       hl_results,
+                                       convergence_summary,
+                                       symbol,
+                                       interval)
+    fig_table.show()
