@@ -7,13 +7,6 @@ from diagnostics.halflife_calculator import HalfLifeCalculator
 from diagnostics.convergence_checker import ConvergenceChecker
 from diagnostics.window_diagnostics import WindowDiagnostics
 
-@property
-def scores(self) -> pd.DataFrame:
-    if self._scores is None:
-        raise RuntimeError("Scores not computed yet.")
-    return self._scores.copy()
-
-
 def run_vwap_pipeline(clean_df, vwap_windows, roll_len=100):
 
     base_vwap = VWAPCalculator.compute_rolling_vwap(

@@ -29,6 +29,12 @@ class WindowDiagnostics:
         # Built progressively across stages
         self._scores: Optional[pd.DataFrame] = None
 
+    @property
+    def scores(self) -> pd.DataFrame:
+        if self._scores is None:
+            raise RuntimeError("Scores not computed yet.")
+        return self._scores.copy()
+
     # ------------------------------------------------------------------
     # Stage 1 — Eligibility gate
     # ------------------------------------------------------------------
