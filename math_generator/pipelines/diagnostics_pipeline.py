@@ -1,7 +1,9 @@
+import pandas as pd
 from workflow.plotter import OHLCVPlotter
 from diagnostics.vwap_stability import VWAPStabilityDiagnostics
 from workflow.vwap import VWAPCalculator
 from visualization.step3_viz import Step3Viz
+from visualization.step4_viz import Step4Viz
 
 
 def run_static_diagnostics(base_vwap, vwap_windows, lookback_days):
@@ -111,3 +113,18 @@ def run_step3_visualisations(ndev_map: dict, convergence_detail: dict,
                                        symbol,
                                        interval)
     fig_table.show()
+
+def run_step4_visualisations(window_scores: pd.DataFrame,
+                             symbol: str,
+                             interval: str ):
+    """
+    Stage 4 of Step 4.
+    Generates and displays Step 4 ranking plots.
+
+    Parameters come directly from the vwap_pipeline return dict.
+    """
+    fig_heatmap = Step4Viz.ranking_heatmap(window_scores, symbol, interval)
+    fig_heatmap.show()
+
+    fig_bar = Step4Viz.composite_bar(window_scores, symbol, interval)
+    fig_bar.show()
