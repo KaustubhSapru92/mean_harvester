@@ -8,3 +8,9 @@ resample:
   timeframes:
     - "15min"   # 15 minutes
     - "1h"    # 1 hour
+
+regime:
+  atr_window: 14          # bars for ATR rolling mean
+  atr_percentile: 75      # threshold — bars above this are high-vol
+  hurst_window: 100       # minimum bars needed for R/S analysis
+  vol_norm_window: 20     # rolling window for VNDEV volatility normalisation

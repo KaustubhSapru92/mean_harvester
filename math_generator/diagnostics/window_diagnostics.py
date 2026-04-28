@@ -18,7 +18,7 @@ class WindowDiagnostics:
                  hl_results: pd.DataFrame,
                  convergence_summary: pd.DataFrame,
                  convergence_detail: dict[int, dict],
-                 weights: Dict[str, float]
+                 weights: Dict[str, float] = None
                  ):
         self.adf_results        = adf_results
         self.hl_results         = hl_results

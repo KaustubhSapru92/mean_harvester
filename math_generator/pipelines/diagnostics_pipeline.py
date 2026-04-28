@@ -4,7 +4,7 @@ from diagnostics.vwap_stability import VWAPStabilityDiagnostics
 from workflow.vwap import VWAPCalculator
 from visualization.step3_viz import Step3Viz
 from visualization.step4_viz import Step4Viz
-
+from visualization.step5_viz import Step5Viz
 
 def run_static_diagnostics(base_vwap, vwap_windows, lookback_days):
 
@@ -128,3 +128,24 @@ def run_step4_visualisations(window_scores: pd.DataFrame,
 
     fig_bar = Step4Viz.composite_bar(window_scores, symbol, interval)
     fig_bar.show()
+
+def run_step5_visualisations(base_vwap: pd.DataFrame,
+                             atr_df: pd.DataFrame,
+                             hurst_results: pd.DataFrame,
+                             vndev_map: dict,
+                             symbol: str,
+                             interval: str ):
+    """
+    Stage 5 of Step 5.
+    Generates and displays all Step 5 regime filter plots.
+
+    Parameters come directly from the vwap_pipeline return dict.
+    """
+    fig_atr = Step5Viz.atr_overlay(base_vwap, atr_df, symbol, interval)
+    fig_atr.show()
+
+    fig_hurst = Step5Viz.hurst_bar(hurst_results, symbol, interval)
+    fig_hurst.show()
+
+    fig_vndev = Step5Viz.vndev_distributions(vndev_map, symbol, interval)
+    fig_vndev.show()
