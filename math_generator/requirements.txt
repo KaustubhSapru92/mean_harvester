@@ -4,3 +4,4 @@ pandas~=2.3.3
 statsmodels~=0.14.6
 numpy~=2.4.0
 yaml
+seaborn~=0.13.2
