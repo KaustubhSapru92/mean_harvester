@@ -5,6 +5,8 @@ from workflow.vwap import VWAPCalculator
 from visualization.step3_viz import Step3Viz
 from visualization.step4_viz import Step4Viz
 from visualization.step5_viz import Step5Viz
+from visualization.step6_viz import Step6Viz
+
 
 def run_static_diagnostics(base_vwap, vwap_windows, lookback_days):
 
@@ -149,3 +151,34 @@ def run_step5_visualisations(base_vwap: pd.DataFrame,
 
     fig_vndev = Step5Viz.vndev_distributions(vndev_map, symbol, interval)
     fig_vndev.show()
+
+
+def run_step6_visualisations(equity_curves: pd.DataFrame, drawdown_curves: pd.DataFrame,
+                             cross_summary: pd.DataFrame,
+                             vndev_map: dict,
+                             trade_log_df: pd.DataFrame,
+                             entry_threshold: float,
+                             stop_threshold: float,
+                             symbol: str,
+                             interval: str ):
+    """
+    Stage 6 of Step 6.
+    Generates and displays all Step 6 backtester plots.
+
+    Parameters come directly from the vwap_pipeline return dict.
+    """
+
+    fig_equity = Step6Viz.equity_and_drawdown(
+        equity_curves, drawdown_curves, cross_summary, symbol, interval
+    )
+    fig_equity.show()
+
+    fig_signal = Step6Viz.vndev_signal_overlay(
+        vndev_map, trade_log_df,
+        entry_threshold, stop_threshold,
+        symbol, interval
+    )
+    fig_signal.show()
+
+    fig_table = Step6Viz.metrics_summary_table(cross_summary, symbol, interval)
+    fig_table.show()
