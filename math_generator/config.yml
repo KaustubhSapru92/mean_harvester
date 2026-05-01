@@ -14,3 +14,9 @@ regime:
   atr_percentile: 75      # threshold — bars above this are high-vol
   hurst_window: 100       # minimum bars needed for R/S analysis
   vol_norm_window: 20     # rolling window for VNDEV volatility normalisation
+
+backtester:
+  entry_threshold: 2.0    # VNDEV σ level to enter a trade
+  stop_threshold: 3.0     # VNDEV σ level to cut the trade (stop-loss)
+  max_position_pct: 0.25  # Kelly position cap (fraction of capital)
+  bars_per_day: 78        # 5-minute bars in a trading day (6.5hr session)

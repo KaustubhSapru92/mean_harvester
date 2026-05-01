@@ -9,6 +9,14 @@ from diagnostics.window_diagnostics import WindowDiagnostics
 from diagnostics.atr_calculator import ATRCalculator
 from diagnostics.hurst_calculator import HurstCalculator
 from diagnostics.vol_normalizer import VolNormalizer
+from backtester.signal_generator import SignalGenerator
+from backtester.position_sizer import PositionSizer
+from backtester.pnl_engine import PnLEngine
+from backtester.performance_metrics import PerformanceMetrics
+from backtester.trade_book import TradeBook
+
+
+
 
 def run_vwap_pipeline(clean_df, vwap_windows, config, roll_len=100):
 
@@ -113,6 +121,49 @@ def run_vwap_pipeline(clean_df, vwap_windows, config, roll_len=100):
             f"low_vol_pct={row['low_vol_pct']:.1f}%"
         )
 
+    # Step 6 — Stage 1: Signal generation
+    entry_threshold = config.get("backtester", "entry_threshold") or 2.0
+    stop_threshold = config.get("backtester", "stop_threshold") or 3.0
+
+    signal_gen = SignalGenerator(entry_threshold, stop_threshold)
+    signal_results = signal_gen.generate_all(vndev_map, window_scores)
+
+    print(SignalGenerator.flag_report(signal_results))
+
+    # Step 6 — Stage 2: Kelly position sizing
+    max_position_pct = config.get("backtester", "max_position_pct") or 0.25
+
+    sizer = PositionSizer(max_position_pct)
+    sized_results = sizer.size_all(signal_results, base_vwap)
+
+    print(PositionSizer.kelly_report(sized_results))
+    # Step 6 — Stage 3: Vectorised PnL
+
+    pnl_results = PnLEngine.compute_all(sized_results, base_vwap)
+
+    print(PnLEngine.flag_report(pnl_results))
+
+    # ------------------------------------------------------------------
+    # Step 6 — Stage 4: Performance metrics
+    # ------------------------------------------------------------------
+    bars_per_day = config.get("backtester", "bars_per_day") or 78
+
+    perf = PerformanceMetrics(bars_per_day)
+    metrics_df, metrics_map = perf.compute_all(pnl_results)
+
+    print(PerformanceMetrics.flag_report(metrics_df))
+    print(PerformanceMetrics.metrics_table(metrics_df))
+    # ------------------------------------------------------------------
+    # Step 6 — Stage 5: Trade log and equity curve assembly
+    # ------------------------------------------------------------------
+    trade_log_df = TradeBook.build_trade_log(pnl_results, metrics_map)
+    equity_curves = TradeBook.build_equity_curves(pnl_results, base_vwap)
+    drawdown_curves = TradeBook.build_drawdown_curves(pnl_results, base_vwap)
+    cross_summary = TradeBook.cross_window_summary(trade_log_df, metrics_df)
+
+    print(TradeBook.flag_report(trade_log_df, equity_curves))
+
+
     return {
         "base_vwap": base_vwap,
         "rolling_stability": rolling_stability_map,
@@ -129,5 +180,16 @@ def run_vwap_pipeline(clean_df, vwap_windows, config, roll_len=100):
         "low_vol_mask": low_vol_mask,  # Step 5 Stage 1 — boolean mask for low-vol bars
         "hurst_results": hurst_results,  # Step 5 Stage 2 — Hurst H per eligible window
         "vndev_map": vndev_map,  # Step 5 Stage 3 — VNDEV per surviving window
-        "atr_summary": atr_summary  # Step 5 Stage 4 — ATR filter summary stats
+        "atr_summary": atr_summary,  # Step 5 Stage 4 — ATR filter summary stats
+        "signal_gen": signal_gen,  # Step 6 — SignalGenerator instance
+        "signal_results": signal_results,  # Step 6 Stage 1 — signals + trade logs per window
+        "sizer": sizer,  # Step 6 — PositionSizer instance
+        "sized_results": sized_results,  # Step 6 Stage 2 — positions + Kelly meta per window
+        "pnl_results": pnl_results,  # Step 6 Stage 3 — bar_pnl, equity, drawdown per window
+        "metrics_df": metrics_df,  # Step 6 Stage 4 — metrics DataFrame (one row per window)
+        "metrics_map": metrics_map,  # Step 6 Stage 4 — metrics dict per window
+        "trade_log_df": trade_log_df,  # Step 6 Stage 5 — consolidated trade log
+        "equity_curves": equity_curves,  # Step 6 Stage 5 — multi-window equity DataFrame
+        "drawdown_curves": drawdown_curves,  # Step 6 Stage 5 — multi-window drawdown DataFrame
+        "cross_summary": cross_summary,  # Step 6 Stage 5 — cross-window ranked summary
     }
