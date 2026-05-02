@@ -14,7 +14,10 @@ from backtester.position_sizer import PositionSizer
 from backtester.pnl_engine import PnLEngine
 from backtester.performance_metrics import PerformanceMetrics
 from backtester.trade_book import TradeBook
-
+from backtester.walk_forward import WalkForwardSplitter
+from backtester.transaction_costs import TransactionCostEngine
+from backtester.oos_engine import OOSEngine
+from backtester.performance_tables import PerformanceTables
 
 
 
@@ -163,6 +166,46 @@ def run_vwap_pipeline(clean_df, vwap_windows, config, roll_len=100):
 
     print(TradeBook.flag_report(trade_log_df, equity_curves))
 
+    # ------------------------------------------------------------------
+    # Step 7 — Stage 1: Walk-forward split
+    # ------------------------------------------------------------------
+    splitter = WalkForwardSplitter(train_fraction=0.70)
+    wf_splits = splitter.split_all(vndev_map, signal_results)
+
+    print(WalkForwardSplitter.flag_report(wf_splits))
+
+    # Step 7 — Stage 2: Transaction costs
+    cost_engine = TransactionCostEngine(round_trip_pct=0.001)
+    cost_results = cost_engine.apply_to_splits(
+        wf_splits=wf_splits,
+        pnl_results=pnl_results,
+        sized_results=sized_results,
+        base_vwap=base_vwap,
+    )
+
+    oos_engine = OOSEngine()
+    oos_results = oos_engine.run_all(
+        wf_splits=wf_splits,
+        cost_results=cost_results,
+        sized_results=sized_results,
+        window_scores=window_scores,
+        base_vwap=base_vwap,
+        signal_gen=signal_gen,
+        pnl_results=pnl_results,
+    )
+
+    print(OOSEngine.flag_report(oos_results))
+
+    # ------------------------------------------------------------------
+    # Step 7 — Stage 4: Performance tables
+    # ------------------------------------------------------------------
+    summary_table = PerformanceTables.build_summary_table(oos_results)
+    degradation_table = PerformanceTables.build_degradation_table(oos_results)
+    cost_impact_table = PerformanceTables.build_cost_impact_table(
+        cost_results, oos_results
+    )
+
+    print(PerformanceTables.flag_report(summary_table, degradation_table))
 
     return {
         "base_vwap": base_vwap,
@@ -192,4 +235,12 @@ def run_vwap_pipeline(clean_df, vwap_windows, config, roll_len=100):
         "equity_curves": equity_curves,  # Step 6 Stage 5 — multi-window equity DataFrame
         "drawdown_curves": drawdown_curves,  # Step 6 Stage 5 — multi-window drawdown DataFrame
         "cross_summary": cross_summary,  # Step 6 Stage 5 — cross-window ranked summary
+        "splitter": splitter,  # Step 7 — WalkForwardSplitter instance
+        "wf_splits": wf_splits,  # Step 7 Stage 1 — train/test splits per window
+        "cost_engine": cost_engine,  # Step 7 — TransactionCostEngine instance
+        "cost_results": cost_results,  # Step 7 Stage 2 — cost-adjusted PnL per segment
+        "oos_engine": oos_engine,  # Step 7 — OOSEngine instance
+        "oos_results": oos_results,  # Step 7 Stage 3 — IS/OOS metrics + degradation
+        "degradation_table": degradation_table,  # Step 7 Stage 4 — degradation ratings
+        "cost_impact_table": cost_impact_table,  # Step 7 Stage 4 — cost drag per window
     }

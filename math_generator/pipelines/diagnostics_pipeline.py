@@ -6,6 +6,7 @@ from visualization.step3_viz import Step3Viz
 from visualization.step4_viz import Step4Viz
 from visualization.step5_viz import Step5Viz
 from visualization.step6_viz import Step6Viz
+from visualization.step7_viz import Step7Viz
 
 
 def run_static_diagnostics(base_vwap, vwap_windows, lookback_days):
@@ -182,3 +183,46 @@ def run_step6_visualisations(equity_curves: pd.DataFrame, drawdown_curves: pd.Da
 
     fig_table = Step6Viz.metrics_summary_table(cross_summary, symbol, interval)
     fig_table.show()
+
+
+def run_step7_visualisations(
+    oos_results: dict,
+    cost_results: dict,
+    summary_table,
+    degradation_table,
+    wf_splits: dict,
+    sized_results: dict,
+    window_scores,
+    base_vwap,
+    signal_gen,
+    symbol: str,
+    interval: str,
+    roll_window: int = 50,
+):
+    """
+    Stage 5 of Step 7.
+    Generates and displays all Step 7 survival and validation plots.
+
+    Parameters come directly from the vwap_pipeline return dict.
+    """
+    fig_overlay = Step7Viz.is_oos_equity_overlay(
+        oos_results, cost_results, summary_table, symbol, interval
+    )
+    fig_overlay.show()
+
+    fig_rolling = Step7Viz.rolling_sharpe(
+        oos_results, symbol, interval, roll_window=roll_window
+    )
+    fig_rolling.show()
+
+    fig_sweep = Step7Viz.sensitivity_sweep(
+        oos_results, wf_splits, sized_results,
+        window_scores, base_vwap, signal_gen,
+        symbol, interval
+    )
+    fig_sweep.show()
+
+    fig_tables = Step7Viz.performance_table_figure(
+        summary_table, degradation_table, symbol, interval
+    )
+    fig_tables.show()
