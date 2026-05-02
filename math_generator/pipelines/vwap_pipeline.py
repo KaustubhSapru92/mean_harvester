@@ -242,5 +242,6 @@ def run_vwap_pipeline(clean_df, vwap_windows, config, roll_len=100):
         "oos_engine": oos_engine,  # Step 7 — OOSEngine instance
         "oos_results": oos_results,  # Step 7 Stage 3 — IS/OOS metrics + degradation
         "degradation_table": degradation_table,  # Step 7 Stage 4 — degradation ratings
+        "summary_table": summary_table,  # Step 7 Stage 4 — IS vs OOS comparison
         "cost_impact_table": cost_impact_table,  # Step 7 Stage 4 — cost drag per window
     }
