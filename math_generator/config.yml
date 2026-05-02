@@ -1,7 +1,7 @@
 market_data:
   symbol: "ESCORTS.NS"
   base_interval: "5m"
-  lookback_days: 10
+  lookback_days: 120
 
 resample:
   enabled: true
