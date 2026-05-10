@@ -11,6 +11,10 @@ class ConfigLoader:
 
     def get(self, *keys, default=None):
         cfg = self.config
+
         for key in keys:
-            cfg = cfg.get(key, {})
-        return cfg if cfg else default
+            if not isinstance(cfg, dict) or key not in cfg:
+                return default
+            cfg = cfg[key]
+
+        return cfg

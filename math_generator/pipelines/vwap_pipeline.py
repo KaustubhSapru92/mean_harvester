@@ -61,6 +61,71 @@ def validate_data_sufficiency(
         )
 
 
+def select_validation_windows(
+    window_scores: pd.DataFrame,
+    config,
+) -> tuple[list[int], bool, bool]:
+    """
+    Select windows for regime/Hurst/VNDEV validation.
+
+    Research mode:
+        require_convergence=True, allow_smoke_fallback=False
+        -> only fully eligible windows pass.
+
+    Smoke mode:
+        require_convergence=False, allow_smoke_fallback=True
+        -> stationary windows with valid half-life can pass, even if
+           convergence failed.
+    """
+    require_convergence = config.get("validation", "require_convergence")
+    if require_convergence is None:
+        require_convergence = True
+
+    allow_smoke_fallback = (
+        config.get("validation", "allow_smoke_fallback") or False
+    )
+
+    if require_convergence or not allow_smoke_fallback:
+        eligible_windows = list(
+            window_scores[window_scores["eligible"]].index
+        )
+    else:
+        eligible_windows = list(
+            window_scores[
+                (window_scores["p_value"] < 0.05)
+                & (window_scores["half_life_bars"].notna())
+            ].index
+        )
+
+    return eligible_windows, require_convergence, allow_smoke_fallback
+
+def select_candidate_windows(
+    window_scores: pd.DataFrame,
+    vndev_map: dict[int, pd.Series],
+    require_convergence: bool,
+    allow_smoke_fallback: bool,
+) -> pd.DataFrame:
+    """
+    Select final candidate windows after regime/VNDEV filtering.
+    """
+    if require_convergence or not allow_smoke_fallback:
+        window_scores["regime_pass"] = (
+            window_scores["eligible"]
+            & window_scores["hurst_pass"].fillna(False)
+        )
+
+        return window_scores[
+            window_scores["regime_pass"]
+            & window_scores.index.isin(vndev_map.keys())
+        ].sort_values("rank")
+
+    window_scores["regime_pass"] = window_scores.index.isin(vndev_map.keys())
+
+    return window_scores[
+        window_scores.index.isin(vndev_map.keys())
+    ].sort_values(["p_value", "half_life_bars"])
+
+
 def learn_on_train(train_df, vwap_windows, config, roll_len=100):
     train_vwap = VWAPCalculator.compute_rolling_vwap(train_df, windows=vwap_windows)
 
@@ -109,7 +174,9 @@ def learn_on_train(train_df, vwap_windows, config, roll_len=100):
     print(ATRCalculator.flag_report(train_atr_df))
 
     hurst_window = config.get("regime", "hurst_window") or 100
-    eligible_windows = list(window_scores[window_scores["eligible"]].index)
+    
+    eligible_windows, require_convergence, allow_smoke_fallback = (select_validation_windows(window_scores, config))
+
     hurst_results = HurstCalculator.compute_all(
         ndev_map,
         train_low_vol_mask,
@@ -119,13 +186,26 @@ def learn_on_train(train_df, vwap_windows, config, roll_len=100):
     print(HurstCalculator.flag_report(hurst_results))
 
     vol_norm_window = config.get("regime", "vol_norm_window") or 20
-    vndev_map = VolNormalizer.compute_all(
-        ndev_map,
-        train_low_vol_mask,
-        eligible_windows,
-        hurst_results,
-        vol_norm_window,
-    )
+
+    if require_convergence or not allow_smoke_fallback:
+        vndev_map = VolNormalizer.compute_all(
+            ndev_map,
+            train_low_vol_mask,
+            eligible_windows,
+            hurst_results,
+            vol_norm_window,
+        )
+    else:
+        vndev_map = {
+            w: VolNormalizer.compute_window(
+                ndev_map[w],
+                train_low_vol_mask,
+                w,
+                vol_norm_window,
+            )
+            for w in eligible_windows
+        }
+
     print(VolNormalizer.flag_report(vndev_map))
 
     atr_summary = ATRCalculator.summary(train_atr_df)
@@ -137,9 +217,13 @@ def learn_on_train(train_df, vwap_windows, config, roll_len=100):
         window_scores["eligible"] & window_scores["hurst_pass"].fillna(False)
     )
 
-    candidates = window_scores[
-        window_scores["regime_pass"] & window_scores.index.isin(vndev_map.keys())
-    ].sort_values("rank")
+    candidates = select_candidate_windows(
+        window_scores=window_scores,
+        vndev_map=vndev_map,
+        require_convergence=require_convergence,
+        allow_smoke_fallback=allow_smoke_fallback,
+    )
+
     if candidates.empty:
         raise ValueError("No train window passed eligibility and regime filters.")
 
