@@ -24,3 +24,9 @@ backtester:
 validation:
   require_convergence: true
   allow_smoke_fallback: false
+
+data_source:
+  type: "local"
+  file_path: "E:\\Quant_Finance\\data\\reliance_dataset\\1\\RELIANCE_1m Timeframe - StocksPhi.csv"
+  raw_interval: "1m"
+  resample_to: "5min"    # null to keep raw bars; "5min" to aggregate to 5m
